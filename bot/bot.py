@@ -1,7 +1,7 @@
 import hikari
 import re
 
-bot = hikari.GatewayBot(token='OTc4NzU4ODg3ODc0MzYzNDQ2.GAfkl-.kkrRL2yCqjj6mh_-15WTowPtn8pR4xNW5KGDdI')
+bot = hikari.GatewayBot(token='')
 
 
 @bot.listen(hikari.MessageCreateEvent)
