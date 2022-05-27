@@ -15,5 +15,16 @@ async def suggestion_wall(event: hikari.GuildMessageCreateEvent):
     find = re.search(r'(?P<film_name>.+?)(.)?(?P<film_url>(?:http|https).*)', event.content)
     name = find.group('film_name')
     url = find.group('film_url')
+    id = event.message.id
 
-    print('Film info: {0} {1}'.format(name, url))
+    print('Film info: {0} {1} {2}'.format(name, url, id))
+
+
+@bot.listen(hikari.ReactionAddEvent)
+async def suggestion_wall(event: hikari.ReactionAddEvent):
+    print('mark added')
+
+
+@bot.listen(hikari.ReactionDeleteEvent)
+async def suggestion_wall(event: hikari.ReactionDeleteEvent):
+    print('mark deleted')
