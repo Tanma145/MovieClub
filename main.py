@@ -13,7 +13,8 @@ try:
         if None in (API_KEY, DATABASE_URL, OOF):
             raise Exception
 except Exception as e:
-    print("oof")
+    print("Some tokens are missing")
+    os.close(1)
 
 if __name__ == '__main__':
     print('hello!')
