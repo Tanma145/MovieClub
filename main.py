@@ -2,6 +2,8 @@ import hikari
 import os
 from dotenv import load_dotenv
 
+from bot.bot import bot
+
 
 def init():
     try:
@@ -17,8 +19,10 @@ def init():
     except Exception as e:
         print("Some tokens are missing")
         os.close(1)
+    return API_KEY, DATABASE_URL
 
 
 if __name__ == '__main__':
-    init()
+    a, d = init()
+    bot.run()
     print('hello!')
