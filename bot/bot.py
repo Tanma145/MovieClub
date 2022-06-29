@@ -1,11 +1,20 @@
 import hikari
 import re
 
-bot = hikari.GatewayBot(token='')
+import psycopg2
 
+bot = hikari.GatewayBot(token='')
+conn = psycopg2.connect(database="postgres", user="postgres",
+                        password="password", host="localhost", port=5432)
 
 @bot.listen(hikari.MessageCreateEvent)
 async def suggestion_wall(event: hikari.GuildMessageCreateEvent):
+
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM recommendations')
+    records = cur.fetchall()
+    print(records)
+
     if event.is_bot or not event.content:
         return
 
