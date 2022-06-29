@@ -21,7 +21,8 @@ async def suggestion_wall(event: hikari.GuildMessageCreateEvent):
     if event.channel_id != 937176888005263393:
         return
 
-    find = re.search(r'(?P<film_name>.+?)(.)?(?P<film_url>(?:http|https).*)', event.content)
+    find = re.search(r'(?P<film_name>.+?)(.)?(?P<film_url>(?:http|https).*)',
+                     event.content)
     name = find.group('film_name')
     url = find.group('film_url')
     id = event.message.id
@@ -34,6 +35,6 @@ async def suggestion_wall(event: hikari.ReactionAddEvent):
     print('mark added')
 
 
-@bot.listen(hikari.ReactionDeleteEvent)
-async def suggestion_wall(event: hikari.ReactionDeleteEvent):
-    print('mark deleted')
+@bot.listen(hikari.ReactionAddEvent)
+async def suggestion_wall(event: hikari.ReactionAddEvent):
+    print('mark added')
