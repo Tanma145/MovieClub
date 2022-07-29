@@ -13,8 +13,7 @@ def init():
             # keys
             API_KEY = os.environ.get("API_KEY")
             DATABASE_URL = os.environ.get("DATABASE_URL")
-            OOF = os.environ.get("OOF")
-            if None in (API_KEY, DATABASE_URL, OOF):
+            if None in (API_KEY, DATABASE_URL):
                 raise Exception
     except Exception as e:
         print("Some tokens are missing")
