@@ -53,8 +53,26 @@ async def suggestion_wall(event: hikari.GuildMessageCreateEvent):
 
 @bot.listen()
 async def suggestion_wall(event: hikari.ReactionAddEvent):
-    print('mark added')
+    if event.channel_id != 937_176_888_005_263_393:
+        return
 
+    with conn.cursor() as cur:
+        emoji = event.emoji_name
+        "INSERT INTO person_watchlist(message_id, person_id) VALUES ($1, $2);"
+        if emoji == "👍":
+            cur.execute(
+                "INSERT INTO person_watchlist(message_id, person_id) VALUES ($1, $2);",
+                (event.message_id, event.user_id))
+            return
+        elif emoji == "🎞️":
+            cur.execute(
+                "UPDATE recommendations SET is_watched=$1 WHERE message_id=$2;",
+                (True, event.message_id))
+            return
+        else:
+            print(f'Unknown emoji ({emoji}) added by {event.user_id}')
+    conn.commit()
+    cur.close()
 
 @bot.listen()
 async def suggestion_wall(event: hikari.ReactionAddEvent):
