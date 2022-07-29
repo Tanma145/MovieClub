@@ -1,5 +1,5 @@
 import hikari
-import lightbulb
+#import lightbulb
 import re
 import os
 from dotenv import load_dotenv
@@ -15,9 +15,9 @@ if os.path.exists(dotenv_path):
 
 # make sure the port is right (5432 by default)
 
-bot = hikari.GatewayBot(token=API_KEY)
+bot = hikari.GatewayBot(token="")
 conn = psycopg2.connect(database="postgres", user="postgres",
-                        password=DATABASE_PASSWORD, host="localhost",
+                        password="password", host="localhost",
                         port=5433)
 
 
@@ -47,18 +47,17 @@ async def suggestion_wall(event: hikari.GuildMessageCreateEvent):
         "INSERT INTO recommendations(message_id, film_name, film_bait, film_url, is_watched) VALUES (%s, %s, %s, %s, False);",
         (message_id, name, bait, url))
 
-    conn.commit()
     cur.close()
+    conn.commit()
+
 
 
 @bot.listen()
 async def suggestion_wall(event: hikari.ReactionAddEvent):
     if event.channel_id != 937_176_888_005_263_393:
         return
-
     with conn.cursor() as cur:
         emoji = event.emoji_name
-        "INSERT INTO person_watchlist(message_id, person_id) VALUES ($1, $2);"
         if emoji == "👍":
             cur.execute(
                 "INSERT INTO person_watchlist(message_id, person_id) VALUES ($1, $2);",
@@ -75,5 +74,22 @@ async def suggestion_wall(event: hikari.ReactionAddEvent):
     cur.close()
 
 @bot.listen()
-async def suggestion_wall(event: hikari.ReactionAddEvent):
-    print('mark added')
+async def suggestion_wall(event: hikari.ReactionDeleteEvent):
+    if event.channel_id != 937_176_888_005_263_393:
+        return
+    with conn.cursor() as cur:
+        emoji = event.emoji_name
+        if emoji == "👍":
+            cur.execute(
+                "DELETE FROM person_watchlist WHERE message_id=$1 AND person_id=$2;",
+                (event.message_id, event.user_id))
+            return
+        elif emoji == "🎞️":
+            cur.execute(
+                "UPDATE recommendations SET is_watched=$1 WHERE message_id=$2;",
+                (False, event.message_id))
+            return
+        else:
+            print(f'Unknown emoji ({emoji}) added by {event.user_id}')
+    conn.commit()
+    cur.close()
