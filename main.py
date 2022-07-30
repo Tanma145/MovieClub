@@ -5,23 +5,5 @@ from dotenv import load_dotenv
 from bot.bot import bot
 
 
-def init():
-    try:
-        dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
-        if os.path.exists(dotenv_path):
-            load_dotenv(dotenv_path)
-            # keys
-            API_KEY = os.environ.get("API_KEY")
-            DATABASE_URL = os.environ.get("DATABASE_URL")
-            if None in (API_KEY, DATABASE_URL):
-                raise Exception
-    except Exception as e:
-        print("Some tokens are missing")
-        os.close(1)
-    return API_KEY, DATABASE_URL
-
-
 if __name__ == '__main__':
-    a, d = init()
     bot.run()
-    print('hello!')
