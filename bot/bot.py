@@ -34,29 +34,24 @@ conn = psycopg2.connect(database="postgres", user="postgres",
                         port=5433)
 
 
-@bot.listen()
-async def add_film(event: hikari.GuildMessageCreateEvent):
-    if event.is_bot or not event.content:
+def add_film_base(message):
+    # parsing
+    find = re.search(
+        r'(?P<film_name>.+?)\n+(?P<bait>(?:.*\n)+)?(?P<film_url>(?:http|https).*)',
+        message.content)
+    name = find.group('film_name')
+    url = find.group('film_url')
+    if not name or not url:
+        print("Non format message")
         return
-
-    if event.channel_id != CHANNEL_ID:
-        return
+    name = name.strip()
+    url = url.strip()
+    bait = find.group('bait')
+    bait = bait.strip() if bait else ""
+    message_id = message.id
+    print(f'Film info: {name}, {bait}, {url}, {message_id}')
 
     with conn.cursor() as cur:
-        find = re.search(r'(?P<film_name>.+?)\n+(?P<bait>(?:.*\n)+)?(?P<film_url>(?:http|https).*)',
-                         event.content)
-        name = find.group('film_name')
-        url = find.group('film_url')
-        if not name or not url:
-            print("Non format message")
-            return
-        name = name.strip()
-        url = url.strip()
-        bait = find.group('bait')
-        bait = bait.strip() if bait else ""
-        message_id = event.message.id
-
-        print(f'Film info: {name}, {bait}, {url}, {message_id}')
         cur.execute(
             "INSERT INTO recommendations(message_id, film_name, film_bait, film_url, is_watched) VALUES (%s, %s, %s, %s, False);",
             (message_id, name, bait, url))
@@ -64,7 +59,17 @@ async def add_film(event: hikari.GuildMessageCreateEvent):
 
 
 @bot.listen()
-async def suggestion_wall(event: hikari.ReactionAddEvent):
+async def add_film(event: hikari.GuildMessageCreateEvent):
+    if event.is_bot or not event.content:
+        return
+
+    if event.channel_id != CHANNEL_ID:
+        return
+    add_film_base(event.message)
+
+
+@bot.listen()
+async def add_emoji(event: hikari.ReactionAddEvent):
     if event.channel_id != CHANNEL_ID:
         return
     with conn.cursor() as cur:
@@ -85,7 +90,7 @@ async def suggestion_wall(event: hikari.ReactionAddEvent):
 
 
 @bot.listen()
-async def suggestion_wall(event: hikari.ReactionDeleteEvent):
+async def delete_emoji(event: hikari.ReactionDeleteEvent):
     if event.channel_id != CHANNEL_ID:
         return
     with conn.cursor() as cur:
