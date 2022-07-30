@@ -13,6 +13,8 @@ from dotenv import load_dotenv
 
 import psycopg2
 
+users_online = list()
+
 dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
 if os.path.exists(dotenv_path):
     load_dotenv(dotenv_path)
@@ -101,3 +103,18 @@ async def suggestion_wall(event: hikari.ReactionDeleteEvent):
         else:
             print(f'Unknown emoji ({emoji}) added by {event.user_id}')
         conn.commit()
+
+@bot.listen()
+async def suggestion_wall(event: hikari.VoiceStateUpdateEvent):
+    # ивент на подключение к серверу
+
+    if event.old_state.channel_id == event.state.channel_id:
+        return
+
+    # кто-то только подключился или отключился
+    # кто-то присоединился
+    if event.old_state.channel_id == None:
+        users_online.append(event.state.user_id)
+    # кто-то ушел
+    if event.state.channel_id == None:
+        users_online.remove(event.state.user_id)
