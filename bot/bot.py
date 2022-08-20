@@ -45,19 +45,46 @@ async def hello(ctx):
 
 
 @bot.command
+@lightbulb.command('top', 'Let the machine decide what to watch')
+@lightbulb.implements(lightbulb.SlashCommand)
+async def top(ctx):
+    with conn.cursor() as cur:
+        try:
+            cur.execute("SELECT message_id, COUNT(message_id) as id_count FROM public.person_watchlist group by message_id order by id_count desc;")
+            films = cur.fetchall()
+
+        except psycopg2.errors.UniqueViolation:
+            print("Film already added")
+        film_top = ""
+        print(films)
+        print(films[0][0])
+        for film in films:
+            cur.execute("SELECT film_name, film_url FROM recommendations WHERE message_id = %s",
+                        (film[0],))
+            a = cur.fetchall()
+            print(a)
+            if a:
+                [(film_name, film_url)] = a
+            film_top += f"{film[1]} likes - {film_name}: {film_url}\n"
+        conn.commit()
+    await ctx.respond(film_top[0:1900])
+
+
+@bot.command
 @lightbulb.command('update_table', 'Adds all suggestions from current chat into the database')
 @lightbulb.implements(lightbulb.SlashCommand)
 async def update_table(ctx):
+    await ctx.respond("Updating...")
     chat = await bot.rest.fetch_messages(ctx.channel_id, after=ctx.channel_id)
-    print(type(chat[1]))
     for message in chat:
         if not message.content:
             continue
         add_film_base(message)
+        await add_emoji_base(message)
+    await ctx.respond("Everything is up to date")
 
 
 def add_film_base(message):
-    print("started")
     # parsing
     find = re.search(
         r'(?P<film_name>.+?)\n+(?P<bait>(?:.*\n)+)?(?P<film_url>(?:http|https).*)',
@@ -87,13 +114,32 @@ def add_film_base(message):
         conn.commit()
 
 
-def add_emoji_base(message, reaction):
-    pass
+async def add_emoji_base(message):
+    like = hikari.Emoji.parse("👍")
+    users = await bot.rest.fetch_reactions_for_emoji(SUGGESTION_WALL_ID,
+                                                     message.id,
+                                                     like)
+    with conn.cursor() as cur:
+        for user in users:
+            try:
+                cur.execute("SELECT EXISTS (SELECT * FROM recommendations WHERE message_id = %s);",
+                            (str(message.id),))
+                flag = cur.fetchall()
+                if not flag:
+                    print()
+                    break
+                cur.execute(
+                    "INSERT INTO person_watchlist(message_id, person_id) VALUES (%s, %s);",
+                    (message.id, user.id))
+            except psycopg2.errors.UniqueViolation:
+                print("Reaction already added")
+            except psycopg2.errors.InFailedSqlTransaction:
+                print("idk")
+        conn.commit()
 
 
 @bot.listen()
 async def add_film(event: hikari.GuildMessageCreateEvent):
-    print("debug 1")
     if event.is_bot or not event.content:
         print("empty or not bot")
         return
