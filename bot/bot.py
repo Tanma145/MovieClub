@@ -3,7 +3,7 @@
     👍 - я хочу посмотреть этот фильм
     👎 - я хочу не смотреть этот фильм
     👀 - да, я увидел запись об этом фильме
-    🎞 - фильм посмотрен на киноклубе
+    🎞️ - фильм посмотрен на киноклубе
 """
 import hikari
 import lightbulb
@@ -11,6 +11,7 @@ import re
 import os
 from dotenv import load_dotenv
 import psycopg2
+import psycopg2.extras
 
 users_online = list()
 
@@ -48,24 +49,22 @@ async def hello(ctx):
 @lightbulb.command('top', 'Let the machine decide what to watch')
 @lightbulb.implements(lightbulb.SlashCommand)
 async def top(ctx):
-    with conn.cursor() as cur:
-        try:
-            cur.execute("SELECT message_id, COUNT(message_id) as id_count FROM public.person_watchlist group by message_id order by id_count desc;")
-            films = cur.fetchall()
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        sql = '''
+        SELECT COUNT(person_watchlist.message_id) AS id_count, film_name, film_url
+        FROM person_watchlist 
+        JOIN recommendations
+            ON person_watchlist.message_id = recommendations.message_id
+        WHERE is_watched = false
+        GROUP BY film_name, film_url ORDER BY id_count DESC
+        LIMIT 6;
+        '''
+        cur.execute(sql)
+        films = cur.fetchall()
 
-        except psycopg2.errors.UniqueViolation:
-            print("Film already added")
         film_top = ""
-        print(films)
-        print(films[0][0])
         for film in films:
-            cur.execute("SELECT film_name, film_url FROM recommendations WHERE message_id = %s",
-                        (film[0],))
-            a = cur.fetchall()
-            print(a)
-            if a:
-                [(film_name, film_url)] = a
-            film_top += f"{film[1]} likes - {film_name}: {film_url}\n"
+            film_top += f"{film['id_count']} likes - {film['film_name']}: <{film['film_url']}>\n"
         conn.commit()
     await ctx.respond(film_top[0:1900])
 
@@ -107,7 +106,7 @@ def add_film_base(message):
     with conn.cursor() as cur:
         try:
             cur.execute(
-                "INSERT INTO recommendations(message_id, film_name, film_bait, film_url, is_watched) VALUES (%s, %s, %s, %s, False);",
+                "INSERT INTO recommendations(message_id, film_name, film_bait, film_url, is_watched) VALUES (%s, %s, %s, %s, false);",
                 (message_id, name, bait, url))
         except psycopg2.errors.UniqueViolation:
             print("Film already added")
@@ -116,10 +115,16 @@ def add_film_base(message):
 
 async def add_emoji_base(message):
     like = hikari.Emoji.parse("👍")
+    watched = hikari.Emoji.parse("🎞️")
     users = await bot.rest.fetch_reactions_for_emoji(SUGGESTION_WALL_ID,
                                                      message.id,
                                                      like)
     with conn.cursor() as cur:
+        if watched in [reaction.emoji for reaction in message.reactions]:
+            print("WATCHED")
+            cur.execute(
+                "UPDATE recommendations SET is_watched=%s WHERE message_id=%s;",
+                (True, str(message.id)))
         for user in users:
             try:
                 cur.execute("SELECT EXISTS (SELECT * FROM recommendations WHERE message_id = %s);",
